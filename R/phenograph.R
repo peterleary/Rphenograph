@@ -97,8 +97,7 @@
 #'     cex=c(2.5, 2, 1.5)[phenograph_cluster]))
 #' }
 #'
-#' @importFrom igraph graph.data.frame cluster_louvain modularity membership simplify
-#' @useDynLib Rphenograph
+#' @importFrom igraph graph_from_data_frame cluster_louvain modularity membership simplify
 #'
 #' @export
 Rphenograph <- function(data, k=30, 
@@ -165,7 +164,7 @@ Rphenograph <- function(data, k=30,
     t3 <- system.time({
       relations <- as.data.frame(links)
       colnames(relations) <- c("from","to","weight")
-      g <- graph.data.frame(relations, directed=directed)
+      g <- graph_from_data_frame(relations, directed=directed)
       if (directed && edge_comb != "none") {
         cat("  There are typically no duplicated edge when the graph is directed.")
       }

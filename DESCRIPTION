@@ -1,36 +1,29 @@
 Package: Rphenograph
-Title: R implementation of the phenograph algorithm
-Version: 0.99.1.9004
+Title: R Implementation of the PhenoGraph Algorithm
+Version: 0.99.2
 Authors@R: c(
     person("Hao","Chen", role="aut"),
     person("S. Thomas","Kelly", role="ctb"),
     person("Etienne K.", "Becht", role="ctb"),
-    person("Samuel", "Granjeaud", email = "samuel.granjeaud@inserm.fr", role = c("aut", "cre")))
-Description: A simple R implementation of the phenograph [PhenoGraph](http://
-    www.cell.com/cell/abstract/S0092-8674(15)00637-6) algorithm, which is a
-    clustering method designed for high-dimensional single-cell data analysis.
-    It works by creating a graph ("network") representing phenotypic similarities
-    between cells by calculating the Jaccard coefficient between nearest-neighbor
-    sets, and then identifying communities using the well known ["Louvain method"]
-    (https://sites.google.com/site/findcommunities/) in this graph.
-    H. Chen created and published this package.
-    S. Thomas Kelly added pruning and graphs clustering methods.
-    Etienne K. Becht added approximate HNSW nearest neighbors for speed.
+    person("Samuel", "Granjeaud", email = "samuel.granjeaud@inserm.fr", role = c("aut", "cre")),
+    person("Peter", "Leary", email = "peter.leary@uzh.ch", role = "ctb"))
+Description: A simple R implementation of the PhenoGraph algorithm
+    <doi:10.1016/j.cell.2015.05.047>, which is a clustering method designed
+    for high-dimensional single-cell data analysis. It works by creating a
+    graph representing phenotypic similarities between cells by calculating
+    the Jaccard coefficient between nearest-neighbor sets, and then
+    identifying communities using the Louvain method in this graph.
 Depends:
-    R (>= 4.3.0)
+    R (>= 4.1.0)
 Imports:
-    igraph (>= 1.0.1),
+    igraph (>= 2.0.0),
     RANN (>= 2.5),
-    Rcpp (>= 0.12.0)
+    Rcpp (>= 1.0.0)
 LinkingTo: Rcpp
 Suggests:
     RcppHNSW,
     testthat,
-    covr,
-    knitr,
-    rmarkdown,
     ggplot2
 License: Artistic-2.0
 Encoding: UTF-8
 RoxygenNote: 7.3.2
-VignetteBuilder: knitr

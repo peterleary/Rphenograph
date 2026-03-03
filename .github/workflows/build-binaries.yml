@@ -1,0 +1,88 @@
+name: Build Binary Packages
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.config.os }}
+    name: ${{ matrix.config.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: macos-14,       r: 'release', label: 'macOS-arm64',  ext: 'tgz', type: 'mac.binary'}
+          - {os: macos-13,       r: 'release', label: 'macOS-x86_64', ext: 'tgz', type: 'mac.binary'}
+          - {os: ubuntu-latest,  r: 'release', label: 'linux-x86_64', ext: 'tar.gz', type: 'source'}
+          - {os: windows-latest, r: 'release', label: 'windows',      ext: 'zip', type: 'win.binary'}
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::pkgbuild
+          needs: build
+
+      - name: Build source tarball
+        shell: bash
+        run: |
+          R CMD build .
+          echo "SRC_TAR=$(ls *.tar.gz)" >> $GITHUB_ENV
+
+      - name: Build binary package
+        shell: bash
+        run: |
+          R CMD INSTALL --build ${{ env.SRC_TAR }}
+          # Find the built binary (name varies by platform)
+          if [ "${{ matrix.config.ext }}" = "zip" ]; then
+            BINARY=$(ls *.zip)
+          elif [ "${{ matrix.config.ext }}" = "tgz" ]; then
+            BINARY=$(ls *.tgz)
+          else
+            BINARY=${{ env.SRC_TAR }}
+          fi
+          # Rename to include platform label
+          PKG_VER=$(R --vanilla -s -e 'cat(read.dcf("DESCRIPTION")[,"Version"])')
+          DEST="Rphenograph_${PKG_VER}_${{ matrix.config.label }}.${{ matrix.config.ext }}"
+          mv "$BINARY" "$DEST" 2>/dev/null || cp "$BINARY" "$DEST"
+          echo "BINARY=$DEST" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.config.label }}
+          path: ${{ env.BINARY }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: binaries
+          merge-multiple: true
+
+      - name: List binaries
+        run: ls -lh binaries/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: binaries/*
+          generate_release_notes: true

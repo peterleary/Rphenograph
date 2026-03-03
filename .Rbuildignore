@@ -1,7 +1,5 @@
 wip*.R
 Rphenograph_iris_cluster.png
-^appveyor\.yml$
-^\.travis\.yml$
-^codecov\.yml$
+^\.github$
 ^.*\.Rproj$
 ^\.Rproj\.user$

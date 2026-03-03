@@ -1,0 +1,89 @@
+#!/bin/sh
+# Pre-compilation checks for common macOS (especially Apple Silicon) issues
+# These checks run before C++ compilation and give clear diagnostics
+# instead of cryptic compiler errors.
+
+ARCH=$(uname -m)
+OS=$(uname -s)
+
+if [ "$OS" = "Darwin" ]; then
+
+  # ── Check 1: Xcode Command Line Tools installed? ──
+  if ! xcode-select -p > /dev/null 2>&1; then
+    echo ""
+    echo "*** ERROR: Xcode Command Line Tools not found."
+    echo "*** Run:  xcode-select --install"
+    echo "*** Then retry installing Rphenograph."
+    echo ""
+    exit 1
+  fi
+
+  # ── Check 2: C++ standard library headers present? ──
+  # After macOS updates the CLT can be broken/incomplete,
+  # causing 'fatal error: cmath file not found' on any Rcpp package.
+  SDK_PATH=$(xcrun --show-sdk-path 2>/dev/null)
+  CMATH_FOUND=0
+  if [ -n "$SDK_PATH" ]; then
+    # Check the SDK's C++ header directories
+    for d in "$SDK_PATH/usr/include/c++/v1" \
+             "$SDK_PATH/usr/include/c++" \
+             "$(xcode-select -p 2>/dev/null)/usr/include/c++/v1"; do
+      if [ -f "$d/cmath" ]; then
+        CMATH_FOUND=1
+        break
+      fi
+    done
+  fi
+  if [ "$CMATH_FOUND" = "0" ]; then
+    echo ""
+    echo "*** ERROR: C++ standard library headers not found (e.g. <cmath>)."
+    echo "*** Your Xcode Command Line Tools appear broken or incomplete."
+    echo "*** This typically happens after a macOS update."
+    echo "***"
+    echo "*** Fix: reinstall the Command Line Tools:"
+    echo "***   sudo rm -rf /Library/Developer/CommandLineTools"
+    echo "***   xcode-select --install"
+    echo "***"
+    echo "*** If you have Xcode.app installed, also try:"
+    echo "***   sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer"
+    echo ""
+    exit 1
+  fi
+
+  # ── Check 3: x86 flags in ~/.R/Makevars? ──
+  MAKEVARS="$HOME/.R/Makevars"
+  if [ -f "$MAKEVARS" ] && [ "$ARCH" = "arm64" ]; then
+    if grep -q '\-mtune=core2\|\-march=core2\|\-mtune=native' "$MAKEVARS" 2>/dev/null; then
+      echo ""
+      echo "*** WARNING: $MAKEVARS contains x86-specific compiler flags"
+      echo "*** (e.g. -mtune=core2) that will fail on Apple Silicon (arm64)."
+      echo "***"
+      echo "*** If compilation fails, remove or comment out those lines:"
+      echo "***   nano $MAKEVARS"
+      echo "***"
+      echo "*** See: https://mac.r-project.org/tools/"
+      echo ""
+    fi
+  fi
+
+  # ── Check 4: R vs system architecture mismatch? ──
+  # arm64 (uname) and aarch64 (R) are the same — normalise before comparing
+  R_ARCH=$(R --vanilla -s -e 'cat(R.version$arch)' 2>/dev/null)
+  NORM_ARCH="$ARCH"
+  NORM_R_ARCH="$R_ARCH"
+  [ "$NORM_ARCH" = "arm64" ] && NORM_ARCH="aarch64"
+  [ "$NORM_R_ARCH" = "arm64" ] && NORM_R_ARCH="aarch64"
+  if [ -n "$R_ARCH" ] && [ "$NORM_R_ARCH" != "$NORM_ARCH" ]; then
+    echo ""
+    echo "*** WARNING: Architecture mismatch — system is $ARCH but R is $R_ARCH."
+    echo "*** You may be running an x86_64 R under Rosetta on an ARM64 Mac."
+    echo "*** This can cause linker failures."
+    echo "***"
+    echo "*** Download the native ARM64 build of R from:"
+    echo "***   https://cran.r-project.org/bin/macosx/"
+    echo ""
+  fi
+
+fi
+
+exit 0
