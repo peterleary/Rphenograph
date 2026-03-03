@@ -76,12 +76,13 @@ jobs:
 
       - name: Install x86_64 R via Rosetta
         run: |
-          # Get the current R release version URL for x86_64 macOS
-          R_VERSION=$(curl -s https://cran.r-project.org/bin/macosx/ \
+          # Scrape the x86_64 pkg filename from CRAN's big-sur-x86_64 directory
+          PKG=$(curl -s https://cran.r-project.org/bin/macosx/big-sur-x86_64/base/ \
             | grep -o 'R-[0-9.]*-x86_64\.pkg' | head -1)
-          echo "Downloading $R_VERSION"
-          curl -LO "https://cran.r-project.org/bin/macosx/$R_VERSION"
-          sudo installer -pkg "$R_VERSION" -target /
+          URL="https://cran.r-project.org/bin/macosx/big-sur-x86_64/base/$PKG"
+          echo "Downloading $URL"
+          curl -LO "$URL"
+          sudo installer -pkg "$PKG" -target /
           # Verify it's x86_64
           arch -x86_64 /Library/Frameworks/R.framework/Resources/bin/R \
             --vanilla -s -e 'cat("R arch:", R.version$arch, "\n")'
