@@ -13,10 +13,9 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-14,       r: 'release', label: 'macOS-arm64',  ext: 'tgz', type: 'mac.binary'}
-          - {os: macos-13,       r: 'release', label: 'macOS-x86_64', ext: 'tgz', type: 'mac.binary'}
-          - {os: ubuntu-latest,  r: 'release', label: 'linux-x86_64', ext: 'tar.gz', type: 'source'}
-          - {os: windows-latest, r: 'release', label: 'windows',      ext: 'zip', type: 'win.binary'}
+          - {os: macos-14,       r: 'release', label: 'macOS-arm64',  ext: 'tgz'}
+          - {os: ubuntu-latest,  r: 'release', label: 'linux-x86_64', ext: 'tar.gz'}
+          - {os: windows-latest, r: 'release', label: 'windows',      ext: 'zip'}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
