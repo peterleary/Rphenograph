@@ -63,8 +63,62 @@ jobs:
           name: binary-${{ matrix.config.label }}
           path: ${{ env.BINARY }}
 
+  # Separate job: build x86_64 macOS binary via Rosetta on ARM64 runner
+  build-macos-x86:
+    runs-on: macos-14
+    name: macOS-x86_64
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install x86_64 R via Rosetta
+        run: |
+          # Get the current R release version URL for x86_64 macOS
+          R_VERSION=$(curl -s https://cran.r-project.org/bin/macosx/ \
+            | grep -o 'R-[0-9.]*-x86_64\.pkg' | head -1)
+          echo "Downloading $R_VERSION"
+          curl -LO "https://cran.r-project.org/bin/macosx/$R_VERSION"
+          sudo installer -pkg "$R_VERSION" -target /
+          # Verify it's x86_64
+          arch -x86_64 /Library/Frameworks/R.framework/Resources/bin/R \
+            --vanilla -s -e 'cat("R arch:", R.version$arch, "\n")'
+
+      - name: Install dependencies under x86_64 R
+        run: |
+          arch -x86_64 /Library/Frameworks/R.framework/Resources/bin/R \
+            --vanilla -e '
+            install.packages(c("Rcpp", "RANN", "igraph", "pkgbuild"),
+                             repos = "https://cloud.r-project.org")
+          '
+
+      - name: Build source tarball
+        run: |
+          arch -x86_64 /Library/Frameworks/R.framework/Resources/bin/R \
+            CMD build .
+          echo "SRC_TAR=$(ls *.tar.gz)" >> $GITHUB_ENV
+
+      - name: Build x86_64 binary
+        run: |
+          arch -x86_64 /Library/Frameworks/R.framework/Resources/bin/R \
+            CMD INSTALL --build ${{ env.SRC_TAR }}
+          BINARY=$(ls *.tgz)
+          PKG_VER=$(arch -x86_64 /Library/Frameworks/R.framework/Resources/bin/R \
+            --vanilla -s -e 'cat(read.dcf("DESCRIPTION")[,"Version"])')
+          DEST="Rphenograph_${PKG_VER}_macOS-x86_64.tgz"
+          mv "$BINARY" "$DEST"
+          echo "BINARY=$DEST" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-macOS-x86_64
+          path: ${{ env.BINARY }}
+
   release:
-    needs: build
+    needs: [build, build-macos-x86]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
